@@ -1,11 +1,9 @@
 
   # ReadMind
   
-  ## Running the code
+  ## Запуск кода
   
-https://scarecrowthemourne-r-nwxc.bolt.host
+  Ввести `npm i` установка зависимостей.
 
-  Run `npm i` to install the dependencies.
-
-  Run `npm run dev` to start the development server.
+  Ввести `npm run dev` Запуск сервера.
   
