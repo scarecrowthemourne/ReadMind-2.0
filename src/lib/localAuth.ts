@@ -1,115 +1,82 @@
-export interface LocalUser {
+// Локальная система авторизации без внешних зависимостей
+
+export interface User {
   id: string;
   email: string;
-  fullName: string;
-  password: string;
-  createdAt: string;
+  name: string;
 }
 
-export interface Session {
-  userId: string;
-  email: string;
-  fullName: string;
+export interface AuthSession {
+  user: User;
+  token: string;
 }
 
-const USERS_KEY = 'readmind-users';
-const SESSION_KEY = 'readmind-session';
+const USERS_KEY = 'readmind_users';
+const SESSION_KEY = 'readmind_session';
 
-// Get all users from localStorage
-function getUsers(): LocalUser[] {
+// Получить всех пользователей
+function getUsers(): Record<string, { email: string; password: string; name: string }> {
   const users = localStorage.getItem(USERS_KEY);
-  return users ? JSON.parse(users) : [];
+  return users ? JSON.parse(users) : {};
 }
 
-// Save users to localStorage
-function saveUsers(users: LocalUser[]): void {
+// Сохранить пользователей
+function saveUsers(users: Record<string, { email: string; password: string; name: string }>) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
-// Get current session
-export function getSession(): Session | null {
+// Регистрация
+export async function signUp(email: string, password: string, name: string): Promise<{ user: User; session: AuthSession } | null> {
+  const users = getUsers();
+  
+  if (users[email]) {
+    throw new Error('Пользователь с таким email уже существует');
+  }
+  
+  const userId = `user_${Date.now()}`;
+  users[email] = { email, password, name };
+  saveUsers(users);
+  
+  const user: User = { id: userId, email, name };
+  const token = `token_${Date.now()}`;
+  const session: AuthSession = { user, token };
+  
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  
+  return { user, session };
+}
+
+// Вход
+export async function signIn(email: string, password: string): Promise<{ user: User; session: AuthSession } | null> {
+  const users = getUsers();
+  
+  if (!users[email] || users[email].password !== password) {
+    throw new Error('Неверный email или пароль');
+  }
+  
+  const userId = `user_${Date.now()}`;
+  const user: User = { id: userId, email, name: users[email].name };
+  const token = `token_${Date.now()}`;
+  const session: AuthSession = { user, token };
+  
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  
+  return { user, session };
+}
+
+// Выход
+export async function signOut(): Promise<void> {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// Получить текущую сессию
+export function getSession(): AuthSession | null {
   const session = localStorage.getItem(SESSION_KEY);
   return session ? JSON.parse(session) : null;
 }
 
-// Save session
-function saveSession(session: Session): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-// Clear session
-export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-// Sign up new user
-export function signUp(email: string, password: string, fullName: string): { success: boolean; error?: string; user?: Session } {
-  const users = getUsers();
-  
-  // Check if user already exists
-  if (users.find(u => u.email === email)) {
-    return { success: false, error: 'Пользователь с таким email уже существует' };
-  }
-
-  // Validate inputs
-  if (!email || !password || !fullName) {
-    return { success: false, error: 'Все поля обязательны для заполнения' };
-  }
-
-  if (password.length < 6) {
-    return { success: false, error: 'Пароль должен содержать минимум 6 символов' };
-  }
-
-  // Create new user
-  const newUser: LocalUser = {
-    id: Date.now().toString(),
-    email,
-    password, // In real app, this should be hashed
-    fullName,
-    createdAt: new Date().toISOString(),
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-
-  // Create session
-  const session: Session = {
-    userId: newUser.id,
-    email: newUser.email,
-    fullName: newUser.fullName,
-  };
-  saveSession(session);
-
-  return { success: true, user: session };
-}
-
-// Sign in existing user
-export function signIn(email: string, password: string): { success: boolean; error?: string; user?: Session } {
-  const users = getUsers();
-  
-  const user = users.find(u => u.email === email && u.password === password);
-
-  if (!user) {
-    return { success: false, error: 'Неверный email или пароль' };
-  }
-
-  // Create session
-  const session: Session = {
-    userId: user.id,
-    email: user.email,
-    fullName: user.fullName,
-  };
-  saveSession(session);
-
-  return { success: true, user: session };
-}
-
-// Sign out
-export function signOut(): void {
-  clearSession();
-}
-
-// Check if user is authenticated
-export function isAuthenticated(): boolean {
-  return getSession() !== null;
+// Получить текущего пользователя
+export function getCurrentUser(): User | null {
+  const session = getSession();
+  return session ? session.user : null;
 }

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Progress } from './ui/progress';
-import { Book } from '../App';
-import { BookOpen, Plus, Minus } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
+import type { Book } from './EditBookDialog';
 
 interface ProgressUpdateProps {
   book: Book;
@@ -13,137 +12,112 @@ interface ProgressUpdateProps {
 }
 
 export function ProgressUpdate({ book, onUpdateProgress }: ProgressUpdateProps) {
-  const [currentPage, setCurrentPage] = useState(book.currentPage);
+  const [pageInput, setPageInput] = useState(book.currentPage.toString());
+  
+  const progress = (book.currentPage / book.totalPages) * 100;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdateProgress(book.id, currentPage);
+  const handlePageChange = (newPage: number) => {
+    const validPage = Math.max(0, Math.min(newPage, book.totalPages));
+    setPageInput(validPage.toString());
+    onUpdateProgress(book.id, validPage);
   };
 
-  const updatePage = (newPage: number) => {
-    const validPage = Math.min(book.totalPages, Math.max(0, newPage));
-    setCurrentPage(validPage);
+  const handleInputChange = (value: string) => {
+    setPageInput(value);
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= book.totalPages) {
+      onUpdateProgress(book.id, numValue);
+    }
   };
 
-  const addPages = (pages: number) => {
-    updatePage(currentPage + pages);
+  const quickAdd = (pages: number) => {
+    handlePageChange(book.currentPage + pages);
   };
-
-  const progress = Math.round((currentPage / book.totalPages) * 100);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5" />
-          Обновление прогресса чтения
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Visual Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Прогресс</Label>
-              <span className="text-slate-600">{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-3" />
-            <div className="flex justify-between text-slate-500">
-              <span>{currentPage} стр.</span>
-              <span>{book.totalPages} стр.</span>
-            </div>
-          </div>
+    <div className="space-y-4">
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <Label>Прогресс чтения</Label>
+          <span className="text-sm text-muted-foreground">
+            {Math.round(progress)}%
+          </span>
+        </div>
+        <Progress value={progress} className="h-2" />
+      </div>
 
-          {/* Page Input with +/- Buttons */}
-          <div className="space-y-2">
-            <Label htmlFor="currentPage">Текущая страница</Label>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => addPages(-1)}
-                disabled={currentPage <= 0}
-              >
-                <Minus className="w-4 h-4" />
-              </Button>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(book.currentPage - 1)}
+            disabled={book.currentPage === 0}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          
+          <div className="flex-1">
+            <div className="relative">
               <Input
-                id="currentPage"
                 type="number"
                 min="0"
                 max={book.totalPages}
-                value={currentPage}
-                onChange={(e) => updatePage(parseInt(e.target.value) || 0)}
-                className="text-center"
+                value={pageInput}
+                onChange={(e) => handleInputChange(e.target.value)}
+                className="text-center pr-20"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => addPages(1)}
-                disabled={currentPage >= book.totalPages}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                / {book.totalPages}
+              </span>
             </div>
           </div>
 
-          {/* Quick Add Buttons */}
-          <div className="space-y-2">
-            <Label>Быстрое добавление</Label>
-            <div className="grid grid-cols-4 gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => addPages(1)}
-                disabled={currentPage >= book.totalPages}
-                className="w-full"
-              >
-                +1
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => addPages(5)}
-                disabled={currentPage >= book.totalPages}
-                className="w-full"
-              >
-                +5
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => addPages(10)}
-                disabled={currentPage >= book.totalPages}
-                className="w-full"
-              >
-                +10
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => addPages(25)}
-                disabled={currentPage >= book.totalPages}
-                className="w-full"
-              >
-                +25
-              </Button>
-            </div>
-          </div>
-
-          {currentPage >= book.totalPages && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800">
-                🎉 Поздравляем! Вы закончили читать эту книгу!
-              </p>
-            </div>
-          )}
-
-          <Button type="submit" className="w-full">
-            Сохранить прогресс
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(book.currentPage + 1)}
+            disabled={book.currentPage >= book.totalPages}
+          >
+            <Plus className="h-4 w-4" />
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => quickAdd(10)}
+            disabled={book.currentPage >= book.totalPages}
+            className="flex-1"
+          >
+            +10
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => quickAdd(25)}
+            disabled={book.currentPage >= book.totalPages}
+            className="flex-1"
+          >
+            +25
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => quickAdd(50)}
+            disabled={book.currentPage >= book.totalPages}
+            className="flex-1"
+          >
+            +50
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

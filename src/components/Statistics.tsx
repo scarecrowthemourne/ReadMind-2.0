@@ -1,238 +1,167 @@
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Book } from '../App';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { BookOpen, CheckCircle2, Clock, FileText } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Book, BookOpen, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import type { Book as BookType } from './EditBookDialog';
 
 interface StatisticsProps {
-  books: Book[];
+  books: BookType[];
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#64748b', '#f59e0b', '#8b5cf6', '#ec4899'];
-
 export function Statistics({ books }: StatisticsProps) {
-  const stats = useMemo(() => {
-    const totalBooks = books.length;
-    const finishedBooks = books.filter(b => b.status === 'finished').length;
-    const readingBooks = books.filter(b => b.status === 'reading').length;
-    const plannedBooks = books.filter(b => b.status === 'planned').length;
-    
-    const totalPages = books.reduce((sum, book) => sum + book.totalPages, 0);
-    const readPages = books.reduce((sum, book) => sum + book.currentPage, 0);
-    const totalNotes = books.reduce((sum, book) => sum + book.notes.length, 0);
+  const totalBooks = books.length;
+  const completedBooks = books.filter(b => b.status === 'completed').length;
+  const readingBooks = books.filter(b => b.status === 'reading').length;
+  const toReadBooks = books.filter(b => b.status === 'to-read').length;
 
-    // Genre distribution
-    const genreCount: Record<string, number> = {};
-    books.forEach(book => {
-      genreCount[book.genre] = (genreCount[book.genre] || 0) + 1;
-    });
+  const totalPages = books.reduce((sum, book) => sum + book.totalPages, 0);
+  const pagesRead = books.reduce((sum, book) => sum + book.currentPage, 0);
+  const overallProgress = totalPages > 0 ? Math.round((pagesRead / totalPages) * 100) : 0;
 
-    const genreData = Object.entries(genreCount)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
+  // Calculate genre statistics
+  const genreStats = books.reduce((acc, book) => {
+    if (book.genre) {
+      acc[book.genre] = (acc[book.genre] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
 
-    // Status distribution
-    const statusData = [
-      { name: 'Читаю', value: readingBooks },
-      { name: 'Прочитано', value: finishedBooks },
-      { name: 'Планирую', value: plannedBooks },
-    ].filter(item => item.value > 0);
+  const topGenres = Object.entries(genreStats)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
 
-    // Monthly reading (last 6 months)
-    const monthlyData: Record<string, number> = {};
-    const now = new Date();
-    
-    books.forEach(book => {
-      if (book.status === 'finished') {
-        const date = new Date(book.dateAdded);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-      }
-    });
-
-    const monthlyChartData = Object.entries(monthlyData)
-      .map(([month, count]) => ({
-        month: new Date(month + '-01').toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' }),
-        count,
-      }))
-      .slice(-6);
-
-    return {
-      totalBooks,
-      finishedBooks,
-      readingBooks,
-      plannedBooks,
-      totalPages,
-      readPages,
-      totalNotes,
-      genreData,
-      statusData,
-      monthlyChartData,
-    };
-  }, [books]);
+  const stats = [
+    {
+      title: 'Всего книг',
+      value: totalBooks,
+      icon: Book,
+      color: 'text-blue-500',
+    },
+    {
+      title: 'Прочитано',
+      value: completedBooks,
+      icon: CheckCircle2,
+      color: 'text-green-500',
+    },
+    {
+      title: 'Читаю сейчас',
+      value: readingBooks,
+      icon: BookOpen,
+      color: 'text-orange-500',
+    },
+    {
+      title: 'В планах',
+      value: toReadBooks,
+      icon: Clock,
+      color: 'text-gray-500',
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Overview Cards */}
+      {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm">{stat.title}</CardTitle>
+                <Icon className={`h-4 w-4 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl">{stat.value}</div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Detailed Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-slate-600">Всего книг</CardTitle>
-            <BookOpen className="w-5 h-5 text-blue-500" />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Общий прогресс
+            </CardTitle>
+            <CardDescription>Прочитано страниц из всех книг</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-slate-900">{stats.totalBooks}</div>
+            <div className="space-y-2">
+              <div className="text-3xl">{overallProgress}%</div>
+              <p className="text-sm text-muted-foreground">
+                {pagesRead.toLocaleString('ru-RU')} из {totalPages.toLocaleString('ru-RU')} страниц
+              </p>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-primary h-full transition-all duration-300"
+                  style={{ width: `${overallProgress}%` }}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-slate-600">Прочитано</CardTitle>
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
+          <CardHeader>
+            <CardTitle>Популярные жанры</CardTitle>
+            <CardDescription>Ваши любимые категории</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-slate-900">{stats.finishedBooks}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-slate-600">Читаю сейчас</CardTitle>
-            <Clock className="w-5 h-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-slate-900">{stats.readingBooks}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-slate-600">Всего заметок</CardTitle>
-            <FileText className="w-5 h-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-slate-900">{stats.totalNotes}</div>
+            {topGenres.length > 0 ? (
+              <div className="space-y-3">
+                {topGenres.map(([genre, count]) => (
+                  <div key={genre} className="flex items-center justify-between">
+                    <span className="text-sm">{genre}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-primary h-full"
+                          style={{ width: `${(count / totalBooks) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-muted-foreground w-8 text-right">
+                        {count}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Добавьте жанры к книгам для отображения статистики
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Pages Statistics */}
+      {/* Reading Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Статистика по страницам</CardTitle>
+          <CardTitle>Активность чтения</CardTitle>
+          <CardDescription>Краткий обзор вашей библиотеки</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Всего страниц во всех книгах</span>
-              <span className="text-slate-900">{stats.totalPages.toLocaleString('ru-RU')}</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-2xl mb-1">{completedBooks}</div>
+              <p className="text-xs text-muted-foreground">Завершено книг</p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Прочитано страниц</span>
-              <span className="text-slate-900">{stats.readPages.toLocaleString('ru-RU')}</span>
+            <div>
+              <div className="text-2xl mb-1">{readingBooks}</div>
+              <p className="text-xs text-muted-foreground">В процессе</p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Процент выполнения</span>
-              <span className="text-slate-900">
-                {stats.totalPages > 0 ? Math.round((stats.readPages / stats.totalPages) * 100) : 0}%
-              </span>
+            <div>
+              <div className="text-2xl mb-1">{Math.round(pagesRead / Math.max(totalBooks, 1))}</div>
+              <p className="text-xs text-muted-foreground">Стр. на книгу</p>
+            </div>
+            <div>
+              <div className="text-2xl mb-1">{completedBooks > 0 ? Math.round((completedBooks / totalBooks) * 100) : 0}%</div>
+              <p className="text-xs text-muted-foreground">Завершенность</p>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Charts */}
-      {books.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Genre Distribution */}
-          {stats.genreData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Распределение по жанрам</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats.genreData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                      interval={0}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Status Distribution */}
-          {stats.statusData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Статус книг</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={stats.statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {stats.statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Monthly Progress */}
-          {stats.monthlyChartData.length > 0 && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Прочитанные книги по месяцам</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats.monthlyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {books.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-slate-500">
-            <BarChart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Статистика будет доступна после добавления книг</p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

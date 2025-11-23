@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Auth } from './src/components/Auth';
-import { BookLibrary } from './src/components/BookLibrary';
-import { BookDetail } from './src/components/BookDetail';
-import { AddBookDialog } from './src/components/AddBookDialog';
-import { EditBookDialog } from './src/components/EditBookDialog';
-import { Statistics } from './src/components/Statistics';
-import { Button } from './src/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './src/components/ui/tabs';
-import { getCurrentUser, signOut } from './src/lib/localAuth';
+import { Auth } from './components/Auth';
+import { BookLibrary } from './components/BookLibrary';
+import { BookDetail } from './components/BookDetail';
+import { AddBookDialog } from './components/AddBookDialog';
+import { EditBookDialog } from './components/EditBookDialog';
+import { Statistics } from './components/Statistics';
+import { Button } from './components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { getCurrentUser, signOut } from './lib/localAuth';
 import { BookOpen, BarChart3, LogOut, User } from 'lucide-react';
-import type { Book } from './src/components/EditBookDialog';
+import type { Book } from './components/EditBookDialog';
 
 interface Note {
   id: string;

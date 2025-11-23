@@ -1,62 +1,68 @@
-import { Book } from '../App';
-import { Card, CardContent, CardHeader } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { BookOpen, User, Tag } from 'lucide-react';
+import { Book as BookIcon, Clock, CheckCircle2 } from 'lucide-react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import type { Book } from './EditBookDialog';
 
 interface BookCardProps {
   book: Book;
   onClick: () => void;
 }
 
-const statusConfig = {
-  reading: { label: 'Читаю', color: 'bg-blue-500' },
-  finished: { label: 'Прочитано', color: 'bg-green-500' },
-  planned: { label: 'Планирую', color: 'bg-slate-500' },
-};
-
 export function BookCard({ book, onClick }: BookCardProps) {
-  const progress = Math.round((book.currentPage / book.totalPages) * 100);
+  const progress = (book.currentPage / book.totalPages) * 100;
+
+  const statusConfig = {
+    'reading': { label: 'Читаю', icon: Clock, color: 'bg-blue-500' },
+    'completed': { label: 'Прочитано', icon: CheckCircle2, color: 'bg-green-500' },
+    'to-read': { label: 'В планах', icon: BookIcon, color: 'bg-gray-500' },
+  };
+
   const status = statusConfig[book.status];
+  const StatusIcon = status.icon;
 
   return (
     <Card 
-      className="hover:shadow-lg transition-shadow cursor-pointer group"
+      className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
       onClick={onClick}
     >
-      <CardHeader className="space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-              {book.title}
-            </h3>
+      <div className="aspect-[2/3] relative bg-muted">
+        {book.coverUrl ? (
+          <ImageWithFallback
+            src={book.coverUrl}
+            alt={book.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <BookIcon className="w-16 h-16 text-muted-foreground/20" />
           </div>
-          <Badge className={`${status.color} text-white shrink-0`}>
+        )}
+        <div className="absolute top-2 right-2">
+          <Badge className={`${status.color} text-white`}>
+            <StatusIcon className="w-3 h-3 mr-1" />
             {status.label}
           </Badge>
         </div>
-        
-        <div className="space-y-2 text-slate-600">
-          <div className="flex items-center gap-2">
-            <User className="w-4 h-4 shrink-0" />
-            <span className="truncate">{book.author}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 shrink-0" />
-            <span className="truncate">{book.genre}</span>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        <div className="flex items-center justify-between text-slate-600">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4" />
+      </div>
+      <CardContent className="p-4">
+        <h3 className="line-clamp-1 mb-1">{book.title}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-1 mb-3">
+          {book.author}
+        </p>
+        {book.genre && (
+          <Badge variant="secondary" className="mb-3 text-xs">
+            {book.genre}
+          </Badge>
+        )}
+        <div className="space-y-1">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Прогресс</span>
             <span>{book.currentPage} / {book.totalPages}</span>
           </div>
-          <span>{progress}%</span>
+          <Progress value={progress} className="h-1.5" />
         </div>
-        <Progress value={progress} className="h-2" />
       </CardContent>
     </Card>
   );
